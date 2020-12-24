@@ -20,8 +20,20 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates
+# change timezont from UTC to CST
+ENV TZ="Asia/Shanghai"
+RUN apk --no-cache add tzdata && cp /usr/share/zoneinfo/$TZ /etc/localtime \
+  && echo ${TZ} > /etc/timezone 
+# && apk del tzdata
+RUN date
 
 WORKDIR /root/
+# Build Args
+ARG LOG_DIR=/app/logs
+# Create Log direcotry
+RUN mkdir -p ${LOG_DIR}
+# Add Environment variable of logfile
+ENV LOG_FILE_LOCATION=${LOG_DIR}/app.log
 
 # Copy the pre-built binary file from the previous stage
 COPY --from=builder /app/main .
