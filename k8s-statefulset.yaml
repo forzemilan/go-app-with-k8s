@@ -1,0 +1,58 @@
+# create a headless service to make pod communicate with each other
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-docker-headless
+spec:
+  clusterIP: None
+  selector:
+    app: go-docker
+  ports:
+    - name: http
+      port: 80
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: go-docker
+spec:
+  serviceName: go-docker
+  selector:
+    matchLabels:
+      app: go-docker
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: go-docker
+    spec:
+      containers:
+        - name: go-docker
+          image: harbor.test.h.cn/rke-lab/go-docker:v3.0
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: applog
+              mountPath: /app/logs/
+  volumeClaimTemplates:
+    - metadata:
+        name: applog
+      spec:
+        resources:
+          requests:
+            storage: 100Mi
+        accessModes:
+          - ReadWriteOnce
+---
+# create a service to expose the statefulset
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-docker-public
+spec:
+  selector:
+    app: go-docker
+  ports:
+    - port: 80
+      targetPort: 8080
